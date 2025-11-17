@@ -83,6 +83,16 @@ export interface PersonaCreateRequest {
   user_relationship_notes?: string | null;
 }
 
+export interface AppMeta {
+  app_name: string;
+  version: string;
+  disclaimer: string;
+}
+
+export interface APIError {
+  detail: string;
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -132,7 +142,21 @@ export async function getPersona(id: string): Promise<PersonaResponse> {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch persona');
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch persona' })) as APIError;
+    throw new Error(error.detail || 'Failed to fetch persona');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get application metadata including version and disclaimer
+ */
+export async function getAppMeta(): Promise<AppMeta> {
+  const response = await fetch(`${API_BASE_URL}/api/meta`);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch app metadata');
   }
 
   return response.json();

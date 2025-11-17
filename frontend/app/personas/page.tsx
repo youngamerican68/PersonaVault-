@@ -39,9 +39,13 @@ export default async function PersonasPage() {
         )}
 
         {personas.length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-slate-600 text-lg mb-4">
-              You haven&apos;t created any persona backups yet.
+          <div className="card text-center py-16 bg-slate-50">
+            <div className="text-6xl mb-6">📦</div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">
+              No Persona Backups Yet
+            </h2>
+            <p className="text-slate-600 text-lg mb-6 max-w-md mx-auto">
+              Start preserving your AI companion&apos;s unique personality, memories, and traits.
             </p>
             <Link href="/" className="btn-primary inline-block">
               Create Your First Backup

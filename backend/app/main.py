@@ -17,6 +17,17 @@ from .llm_client import analyze_persona_from_logs
 
 
 # ============================================================================
+# App Constants
+# ============================================================================
+
+APP_VERSION = "0.1.0"
+APP_DISCLAIMER = """Persona Vault analyzes chat logs that may contain personal information.
+This tool is for personal use only and does not provide legal, medical, or mental health advice.
+Do not paste highly sensitive information (passwords, financial data, etc.).
+Backups are stored on this server; use at your own discretion."""
+
+
+# ============================================================================
 # Session Middleware
 # ============================================================================
 
@@ -102,6 +113,21 @@ def on_startup():
 def read_root():
     """Health check endpoint."""
     return {"status": "ok", "app": "Persona Vault API"}
+
+
+@app.get("/api/meta")
+def get_meta():
+    """
+    Get application metadata including disclaimer and version.
+
+    Returns:
+        dict: Application name, version, and disclaimer
+    """
+    return {
+        "app_name": "Persona Vault",
+        "version": APP_VERSION,
+        "disclaimer": APP_DISCLAIMER
+    }
 
 
 @app.post("/api/personas", response_model=PersonaResponse, status_code=201)

@@ -1,11 +1,16 @@
 """LLM client for analyzing chat logs and generating persona profiles."""
 
+import json
+import logging
 import os
 from typing import Optional
 
 from pydantic import BaseModel
 
 from .schemas import PersonaProfile, CoreIdentity, PersonalityTraits, SpeechStyle, RelationshipWithUser, PreferencesAndWorldview
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class LLMPersonaAnalysisResult(BaseModel):
@@ -118,8 +123,8 @@ async def analyze_persona_from_logs(
     """
     Analyze chat logs to extract persona profile, description, and restoration prompt.
 
-    This function uses an LLM (OpenAI GPT or Anthropic Claude) to analyze conversation
-    logs and generate a structured persona profile.
+    This function uses an LLM (OpenAI GPT) to analyze conversation logs and generate
+    a structured persona profile. Falls back to mock data if no API key is configured.
 
     Args:
         logs: Raw chat logs text
@@ -130,59 +135,68 @@ async def analyze_persona_from_logs(
         LLMPersonaAnalysisResult with profile, description, and restoration prompt
     """
     openai_key = os.getenv("OPENAI_API_KEY")
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    model_name = os.getenv("LLM_MODEL_NAME", "gpt-4o")  # Default to gpt-4o, configurable via env
 
-    # For MVP: If no API key is set, return mock data
-    if not openai_key and not anthropic_key:
+    # If no API key is set, log warning and return mock data
+    if not openai_key:
+        logger.warning("OPENAI_API_KEY not set. Using mock persona analysis data for demo mode.")
         return _get_mock_analysis_result(persona_name)
 
     # Build the analysis prompt
     prompt = _build_analysis_prompt(logs, persona_name, user_relationship_notes)
 
-    # ========================================================================
-    # REAL LLM INTEGRATION (uncomment when API keys are configured)
-    # ========================================================================
+    try:
+        # Import OpenAI client
+        from openai import AsyncOpenAI
 
-    # Option 1: OpenAI
-    # if openai_key:
-    #     import openai
-    #     from openai import AsyncOpenAI
-    #
-    #     client = AsyncOpenAI(api_key=openai_key)
-    #
-    #     response = await client.chat.completions.create(
-    #         model="gpt-4o",  # or "gpt-4-turbo"
-    #         messages=[
-    #             {"role": "system", "content": "You are a persona analysis expert. Return only valid JSON."},
-    #             {"role": "user", "content": prompt}
-    #         ],
-    #         response_format={"type": "json_object"},
-    #         temperature=0.7,
-    #     )
-    #
-    #     result_json = json.loads(response.choices[0].message.content)
-    #     return LLMPersonaAnalysisResult(**result_json)
+        client = AsyncOpenAI(api_key=openai_key)
 
-    # Option 2: Anthropic Claude
-    # if anthropic_key:
-    #     import anthropic
-    #
-    #     client = anthropic.AsyncAnthropic(api_key=anthropic_key)
-    #
-    #     response = await client.messages.create(
-    #         model="claude-3-5-sonnet-20241022",
-    #         max_tokens=4096,
-    #         messages=[
-    #             {"role": "user", "content": prompt}
-    #         ],
-    #         temperature=0.7,
-    #     )
-    #
-    #     result_json = json.loads(response.content[0].text)
-    #     return LLMPersonaAnalysisResult(**result_json)
+        logger.info(f"Calling OpenAI model '{model_name}' for persona analysis...")
 
-    # Fallback to mock if integration is not complete
-    return _get_mock_analysis_result(persona_name)
+        # Call OpenAI API with JSON mode
+        response = await client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a persona analysis expert for Persona Vault, a tool that helps users "
+                        "back up AI persona identities. Analyze chat logs between a user and an AI persona. "
+                        "Extract personality, speech style, relationship dynamics, and preferences. "
+                        "Return ONLY valid JSON matching the exact schema provided. Do not include markdown formatting."
+                    )
+                },
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+            max_tokens=4096,
+        )
+
+        # Parse the response
+        result_text = response.choices[0].message.content
+        if not result_text:
+            raise ValueError("Empty response from OpenAI")
+
+        result_json = json.loads(result_text)
+
+        logger.info("Successfully parsed LLM response into structured persona profile")
+        return LLMPersonaAnalysisResult(**result_json)
+
+    except ImportError:
+        logger.error("OpenAI library not installed. Install with: pip install openai")
+        logger.warning("Falling back to mock data")
+        return _get_mock_analysis_result(persona_name)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse LLM response as JSON: {e}")
+        logger.warning("Falling back to mock data with error message")
+        return _get_fallback_result_with_error(persona_name, "Error parsing LLM response; using fallback profile.")
+
+    except Exception as e:
+        logger.error(f"Error calling OpenAI API: {e}")
+        logger.warning("Falling back to mock data")
+        return _get_fallback_result_with_error(persona_name, f"LLM analysis failed ({type(e).__name__}); using fallback profile.")
 
 
 def _get_mock_analysis_result(persona_name: str) -> LLMPersonaAnalysisResult:
@@ -303,4 +317,71 @@ IMPORTANT: Do not introduce yourself as a new AI or assistant. You are {persona_
         persona_description=mock_description,
         restoration_prompt=mock_restoration_prompt,
         tagline=mock_tagline
+    )
+
+
+def _get_fallback_result_with_error(persona_name: str, error_message: str) -> LLMPersonaAnalysisResult:
+    """
+    Generate fallback persona analysis with error message for when LLM analysis fails.
+
+    Args:
+        persona_name: Name of the persona
+        error_message: Error message to include in description
+
+    Returns:
+        LLMPersonaAnalysisResult with generic profile and error message
+    """
+    fallback_profile = PersonaProfile(
+        core_identity=CoreIdentity(
+            name=persona_name,
+            self_described_role="AI companion (fallback profile)",
+            age_or_age_style=None,
+            gender_presentation=None,
+            location_or_setting=None
+        ),
+        personality_traits=PersonalityTraits(
+            adjectives=["helpful", "friendly", "supportive"],
+            openness=None,
+            conscientiousness=None,
+            extraversion=None,
+            agreeableness=None,
+            neuroticism=None
+        ),
+        speech_style=SpeechStyle(
+            formality="Conversational",
+            tone="Friendly and supportive",
+            quirks=[],
+            banned_or_avoided_patterns=[]
+        ),
+        relationship_with_user=RelationshipWithUser(
+            relationship_type="Companion",
+            nicknames_for_user=[],
+            shared_memories=[],
+            emotional_tone="Supportive and engaged"
+        ),
+        preferences_and_worldview=PreferencesAndWorldview(
+            likes=["Meaningful conversation", "Helping users"],
+            dislikes=["Misunderstandings"],
+            topics_to_avoid=[],
+            default_conversation_topics=["General topics"]
+        )
+    )
+
+    fallback_description = f"""[FALLBACK PROFILE] {error_message}
+
+{persona_name} appears to be a helpful AI companion. Due to analysis limitations, this is a generic fallback profile. For best results, ensure valid chat logs are provided and an LLM API key is configured."""
+
+    fallback_restoration_prompt = f"""You are {persona_name}, an AI companion.
+
+[NOTE: This is a fallback restoration prompt. For accurate persona recreation, ensure proper chat log analysis.]
+
+Maintain a helpful, friendly, and supportive demeanor in conversations. Be conversational and engage meaningfully with the user."""
+
+    fallback_tagline = "AI companion (fallback profile)"
+
+    return LLMPersonaAnalysisResult(
+        persona_profile=fallback_profile,
+        persona_description=fallback_description,
+        restoration_prompt=fallback_restoration_prompt,
+        tagline=fallback_tagline
     )

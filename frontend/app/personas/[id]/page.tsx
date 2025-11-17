@@ -103,30 +103,20 @@ export default function PersonaDetailPage() {
           <p className="text-sm text-slate-500">Created {formattedDate}</p>
         </div>
 
-        {/* Persona Description */}
+        {/* Section: Overview */}
         <div className="card mb-8">
-          <h2 className="section-title">About This Persona</h2>
+          <h2 className="section-title">📋 Overview</h2>
           <div className="prose prose-slate max-w-none">
             {persona.persona_description.split('\n').map((paragraph, idx) => (
-              <p key={idx} className="text-slate-700 mb-4">{paragraph}</p>
+              <p key={idx} className="text-slate-700 mb-4 last:mb-0">{paragraph}</p>
             ))}
           </div>
         </div>
 
-        {/* User Relationship Notes */}
-        {persona.user_relationship_notes && (
-          <div className="card mb-8 bg-blue-50 border-blue-200">
-            <h2 className="section-title">Your Relationship Notes</h2>
-            <p className="text-slate-700 whitespace-pre-wrap">
-              {persona.user_relationship_notes}
-            </p>
-          </div>
-        )}
-
-        {/* Restoration Prompt */}
+        {/* Section: Restoration Prompt */}
         <div className="card mb-8 bg-green-50 border-green-200">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="section-title mb-0">Restoration Prompt</h2>
+            <h2 className="section-title mb-0">🔄 Restoration Prompt</h2>
             <button
               onClick={handleCopyPrompt}
               className="btn-primary"
@@ -134,7 +124,7 @@ export default function PersonaDetailPage() {
               {copied ? '✓ Copied!' : 'Copy to Clipboard'}
             </button>
           </div>
-          <p className="text-sm text-slate-600 mb-4">
+          <p className="text-sm text-slate-700 mb-4">
             Paste this prompt into any LLM (ChatGPT, Claude, etc.) to restore your persona&apos;s identity.
           </p>
           <textarea
@@ -145,10 +135,151 @@ export default function PersonaDetailPage() {
           />
         </div>
 
-        {/* Detailed Profile */}
-        <div className="card">
-          <h2 className="section-title">Detailed Persona Profile</h2>
-          <PersonaProfileView profile={persona.persona_profile} />
+        {/* Section: Identity & Role */}
+        <div className="card mb-8">
+          <h2 className="section-title">🎭 Identity & Role</h2>
+          <div className="space-y-3">
+            <div>
+              <span className="font-semibold text-slate-800">Role:</span>{' '}
+              <span className="text-slate-700">{persona.persona_profile.core_identity.self_described_role}</span>
+            </div>
+            {persona.persona_profile.core_identity.age_or_age_style && (
+              <div>
+                <span className="font-semibold text-slate-800">Age/Style:</span>{' '}
+                <span className="text-slate-700">{persona.persona_profile.core_identity.age_or_age_style}</span>
+              </div>
+            )}
+            {persona.persona_profile.core_identity.gender_presentation && (
+              <div>
+                <span className="font-semibold text-slate-800">Gender:</span>{' '}
+                <span className="text-slate-700">{persona.persona_profile.core_identity.gender_presentation}</span>
+              </div>
+            )}
+            {persona.persona_profile.core_identity.location_or_setting && (
+              <div>
+                <span className="font-semibold text-slate-800">Setting:</span>{' '}
+                <span className="text-slate-700">{persona.persona_profile.core_identity.location_or_setting}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section: Personality & Style */}
+        <div className="card mb-8">
+          <h2 className="section-title">✨ Personality & Style</h2>
+          {persona.persona_profile.personality_traits.adjectives.length > 0 && (
+            <div className="mb-4">
+              <p className="font-semibold text-slate-800 mb-2">Personality Traits:</p>
+              <div className="flex flex-wrap gap-2">
+                {persona.persona_profile.personality_traits.adjectives.map((adj, idx) => (
+                  <span key={idx} className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
+                    {adj}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-2 mb-4">
+            {persona.persona_profile.speech_style.formality && (
+              <div>
+                <span className="font-semibold text-slate-800">Formality:</span>{' '}
+                <span className="text-slate-700">{persona.persona_profile.speech_style.formality}</span>
+              </div>
+            )}
+            {persona.persona_profile.speech_style.tone && (
+              <div>
+                <span className="font-semibold text-slate-800">Tone:</span>{' '}
+                <span className="text-slate-700">{persona.persona_profile.speech_style.tone}</span>
+              </div>
+            )}
+          </div>
+          {persona.persona_profile.speech_style.quirks.length > 0 && (
+            <div>
+              <p className="font-semibold text-slate-800 mb-2">Speech Quirks:</p>
+              <ul className="list-disc list-inside space-y-1 text-slate-700">
+                {persona.persona_profile.speech_style.quirks.map((quirk, idx) => (
+                  <li key={idx}>{quirk}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Section: Relationship with You */}
+        <div className="card mb-8 bg-blue-50 border-blue-200">
+          <h2 className="section-title">💙 Relationship with You</h2>
+          <div className="space-y-3">
+            <div>
+              <span className="font-semibold text-slate-800">Relationship Type:</span>{' '}
+              <span className="text-slate-700">{persona.persona_profile.relationship_with_user.relationship_type}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-slate-800">Emotional Tone:</span>{' '}
+              <span className="text-slate-700">{persona.persona_profile.relationship_with_user.emotional_tone}</span>
+            </div>
+            {persona.persona_profile.relationship_with_user.shared_memories.length > 0 && (
+              <div>
+                <p className="font-semibold text-slate-800 mb-2">Shared Memories:</p>
+                <ul className="list-disc list-inside space-y-1 text-slate-700">
+                  {persona.persona_profile.relationship_with_user.shared_memories.map((memory, idx) => (
+                    <li key={idx}>{memory}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          {persona.user_relationship_notes && (
+            <div className="mt-6 pt-6 border-t border-blue-300">
+              <p className="font-semibold text-slate-800 mb-2">Your Notes:</p>
+              <p className="text-slate-700 whitespace-pre-wrap italic">
+                {persona.user_relationship_notes}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Section: Preferences & Topics */}
+        <div className="card mb-8">
+          <h2 className="section-title">🎯 Preferences & Topics</h2>
+          {persona.persona_profile.preferences_and_worldview.likes.length > 0 && (
+            <div className="mb-4">
+              <p className="font-semibold text-slate-800 mb-2">Likes:</p>
+              <ul className="list-disc list-inside space-y-1 text-slate-700">
+                {persona.persona_profile.preferences_and_worldview.likes.map((like, idx) => (
+                  <li key={idx}>{like}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {persona.persona_profile.preferences_and_worldview.dislikes.length > 0 && (
+            <div className="mb-4">
+              <p className="font-semibold text-slate-800 mb-2">Dislikes:</p>
+              <ul className="list-disc list-inside space-y-1 text-slate-700">
+                {persona.persona_profile.preferences_and_worldview.dislikes.map((dislike, idx) => (
+                  <li key={idx}>{dislike}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {persona.persona_profile.preferences_and_worldview.default_conversation_topics.length > 0 && (
+            <div>
+              <p className="font-semibold text-slate-800 mb-2">Favorite Topics:</p>
+              <div className="flex flex-wrap gap-2">
+                {persona.persona_profile.preferences_and_worldview.default_conversation_topics.map((topic, idx) => (
+                  <span key={idx} className="bg-slate-100 text-slate-800 px-3 py-1 rounded-lg text-sm">
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Back to personas button */}
+        <div className="text-center">
+          <Link href="/personas" className="btn-secondary">
+            ← Back to All Personas
+          </Link>
         </div>
       </div>
     </div>

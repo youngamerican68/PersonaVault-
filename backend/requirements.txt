@@ -11,9 +11,8 @@ alembic==1.12.1
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# LLM clients (optional - uncomment when needed)
-# openai==1.3.7
-# anthropic==0.7.7
+# LLM clients
+openai>=1.3.0  # For real persona analysis (optional but recommended)
 
 # Utilities
 python-dotenv==1.0.0
